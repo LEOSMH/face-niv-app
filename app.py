@@ -112,6 +112,12 @@ bed_no = st.sidebar.text_input("床號 (Bed No.)", placeholder="例：12")
 patient_name = st.sidebar.text_input("姓名 (Patient Name)", placeholder="例：王小明")
 chart_no = st.sidebar.text_input("病歷號 (Chart No.)", placeholder="例：1234567")
 
+track_status = st.sidebar.selectbox(
+    "🔄 本次填表病患狀態 (Status)", 
+    ["收案/日常查檢 (追蹤中)", "結案/停用BIPAP (結案)"],
+    help="若病人停用BIPAP或出院，請選擇『結案』以移出每日巡查名單。"
+)
+
 st.sidebar.subheader("📋 醫囑與呼吸器設定")
 bipap_order = st.sidebar.text_input(
     "當日 BIPAP 使用醫囑 (Order)", 
@@ -124,7 +130,9 @@ with col_set1:
 with col_set2:
     epap_val = st.number_input("EPAP", min_value=4, max_value=20, value=8, step=1, help="cmH2O")
 with col_set3:
-    fio2_val = st.sidebar.slider("FiO2", min_value=21, max_value=100, value=40, step=5, help="%")
+    fio2_options = [21, 25] + list(range(30, 101, 5))
+    default_index = fio2_options.index(40)
+    fio2_val = st.selectbox("FiO2 (%)", options=fio2_options, index=default_index, help="氧氣濃度")
 
 bipap_settings = f"{ipap_val}/{epap_val}/{fio2_val}%"
 
@@ -401,7 +409,7 @@ with tab6:
         1. 在您的 Google 雲端硬碟建立一個新的「Google 試算表」。
         2. 將工作表命名為 **`Sheet1`** (預設即是)。
         3. 在第一行手動輸入您要收集的欄位欄標（選做，系統若偵測空白會自動建立欄位）：
-           `填表時間,單位,床號,姓名,病歷號,當日使用醫囑,BIPAP設定值,是否為初次上機第一天,第一天臉部Baseline皮膚狀況,鼻胃管狀態,漏氣量(Lpm),漏氣量判定,固定帶張力,當班皮膚狀況,下一次減壓時間,護理師簽名`
+           `填表時間,單位,床號,病患狀態,姓名,病歷號,當日使用醫囑,BIPAP設定值,是否為初次上機第一天,第一天臉部Baseline皮膚狀況,鼻胃管狀態,漏氣量(Lpm),漏氣量判定,固定帶張力,當班皮膚狀況,下一次減壓時間,護理師簽名`
         4. 複製試算表的 **網址 URL**（例如 `https://docs.google.com/spreadsheets/d/your-spreadsheet-id/edit#gid=0`）。
 
         #### **第二步：共享您的 Google 試算表**
@@ -433,6 +441,7 @@ with tab6:
         "填表時間": datetime.datetime.now().strftime('%Y-%m-%d %H:%M'),
         "單位": unit_select,
         "床號": bed_no if bed_no else "未填寫",
+        "病患狀態": track_status,
         "姓名": patient_name if patient_name else "未填寫",
         "病歷號": chart_no if chart_no else "未填寫",
         "當日使用醫囑": bipap_order if bipap_order else "未填寫",
@@ -538,6 +547,96 @@ with tab6:
         )
     else:
         st.info("💡 目前暫無已儲存的紀錄。在上方填寫完畢並點選「儲存此筆資料並執行同步」後，數據就會顯示在這裡，並可以匯出下載成 Excel 檔案喔！")
+
+# TAB 7: ACTIVE CASES TRACKER
+with tab7:
+    st.header("👥 今日巡查在案名單 (Active Cases)")
+    st.markdown("""
+    本看板會自動分析雲端或本地儲存的歷史紀錄，透過 **「病歷號」** 進行追蹤與聚合，
+    篩選出**「目前仍在使用 BIPAP 且尚未結案」**的病患。這能協助呼吸治療師（RT）與病房品管同仁快速掌握**「每天有哪些病人需要去探視與查檢」**！
+    """)
+
+    # Get data source: Cloud Sheets (if enabled) or Local session state
+    data_df = None
+    if cloud_sync_enabled:
+        try:
+            conn = st.connection("gsheets", type=GSheetsConnection)
+            data_df = conn.read(worksheet="Sheet1", ttl="0")
+        except Exception:
+            pass
+            
+    if data_df is None or data_df.empty:
+        # Fallback to local session records
+        if len(st.session_state.temp_records) > 0:
+            data_df = pd.DataFrame(st.session_state.temp_records)
+            
+    if data_df is not None and not data_df.empty:
+        # Ensure all required columns are there
+        required_cols = ["填表時間", "單位", "床號", "姓名", "病歷號", "病患狀態"]
+        # Standardize columns (just in case they are missing, though they shouldn't be)
+        for col in required_cols:
+            if col not in data_df.columns:
+                data_df[col] = "N/A"
+                
+        # Parse fill time for correct chronological sorting
+        try:
+            data_df["填表時間_dt"] = pd.to_datetime(data_df["填表時間"])
+        except Exception:
+            data_df["填表時間_dt"] = data_df["填表時間"]
+            
+        # Chronological sort
+        data_df_sorted = data_df.sort_values(by="填表時間_dt", ascending=True)
+        
+        # Group by Chart No (病歷號) to find the latest state of each patient
+        # We drop duplicates keep last to get the latest record
+        latest_records = data_df_sorted.drop_duplicates(subset=["病歷號"], keep="last")
+        
+        # Filter active ones (病患狀態 != 結案/停用BIPAP (結案))
+        active_records = latest_records[latest_records["病患狀態"] != "結案/停用BIPAP (結案)"]
+        
+        # Also calculate extra statistics for active cases:
+        # - NIV Start Date (earliest record for this Chart No)
+        # - Audit Count (total checks for this Chart No)
+        start_dates = data_df_sorted.groupby("病歷號")["填表時間"].first().to_dict()
+        check_counts = data_df_sorted.groupby("病歷號").size().to_dict()
+        
+        if not active_records.empty:
+            # Build display dataframe
+            display_records = active_records.copy()
+            display_records["收案日期/首登時間"] = display_records["病歷號"].map(start_dates)
+            display_records["累計查檢次數"] = display_records["病歷號"].map(check_counts)
+            
+            # Select columns to display beautifully
+            cols_to_show = [
+                "單位", "床號", "姓名", "病歷號", "BIPAP設定值", 
+                "當班皮膚狀況", "漏氣量(Lpm)", "漏氣量判定", 
+                "下一次減壓時間", "收案日期/首登時間", "累計查檢次數"
+            ]
+            
+            # Keep only columns that exist
+            cols_to_show = [c for c in cols_to_show if c in display_records.columns]
+            
+            active_list_table = display_records[cols_to_show].reset_index(drop=True)
+            
+            # Show summary stats
+            st.subheader("📊 當前在案追蹤病人統計")
+            st.success(f"📌 目前共有 **{len(active_list_table)}** 位病患正在進行 2-4 小時定期減壓防護模式。")
+            
+            # Show Table with color highlighting
+            st.dataframe(active_list_table, use_container_width=True)
+            
+            # Tips for RTs
+            st.markdown("""
+            > 💡 **呼吸治療師 (RT) / 護理組長巡查指南：**
+            > 1. **核對實體小時鐘**：請至上述床位探視，確認呼吸器旁的「減壓小時鐘」指針是否調到正確的下一次減壓時間。
+            > 2. **雙指鬆緊度稽核**：現場抽測頭帶鬆緊度（兩指寬幅）與漏氣量（有管路 <= 60 Lpm / 無管路 <= 45 Lpm）。
+            > 3. **一鍵結案機制**：當病人已離線、出院或停止 BIPAP 醫囑，請於左側輸入病歷號並將狀態選為**「結案/停用BIPAP (結案)」**儲存，系統會自動將其移出此追蹤名單。
+            """)
+        else:
+            st.info("🎉 恭喜！目前無任何在案追蹤病患。所有收案病人都已順利結案。")
+    else:
+        st.info("💡 雲端資料庫目前尚無收案紀錄。當護理同仁填寫並儲存首筆病患查檢紀錄後，此處將會自動呈現即時的每日巡查追蹤名單！")
+
 
 # Footer
 st.divider()
