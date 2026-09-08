@@ -140,13 +140,14 @@ nurse_name = st.sidebar.text_input("填表人員/護理師簽名", placeholder="
 st.sidebar.markdown(f"**目前時間：** {datetime.datetime.now().strftime('%Y-%m-%d %H:%M')}")
 
 # Navigation Tabs
-tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
     "📋 照護流程主軸", 
     "🔍 MedRAS 智能評估小卡", 
     "📊 最佳壓力區間查檢表", 
     "⏰ 4小時定期減壓定時器", 
     "🛡️ 臉部皮膚完整度評估",
-    "💾 查檢紀錄儲存與匯出"
+    "💾 查檢紀錄儲存與匯出",
+    "👥 今日巡查在案名單"
 ])
 
 # Variables to share across tabs for saving data
