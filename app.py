@@ -6,7 +6,7 @@ import os
 
 # Set Page Config
 st.set_page_config(
-    page_title="FACE 圈 - NIV 罩護無痕 臨床照護助手 (雲端同步版)",
+    page_title="FACE 圈 - NIV 罩護無痕 臨床照護助手 (v12 日期可調版)",
     page_icon="🏥",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -137,7 +137,15 @@ with col_set3:
 bipap_settings = f"{ipap_val}/{epap_val}/{fio2_val}%"
 
 nurse_name = st.sidebar.text_input("填表人員/護理師簽名", placeholder="請輸入姓名")
-st.sidebar.markdown(f"**目前時間：** {datetime.datetime.now().strftime('%Y-%m-%d %H:%M')}")
+st.sidebar.subheader("📅 填表日期與時間 (可自由調整補登)")
+col_d1, col_d2 = st.sidebar.columns(2)
+with col_d1:
+    entry_date = st.date_input("填表日期", value=datetime.date.today(), help="預設為今日，若為事後補單可選擇過去日期")
+with col_d2:
+    entry_time = st.time_input("填表時間", value=datetime.datetime.now().time(), help="預設為當前時間，可手動微調")
+
+entry_datetime = datetime.datetime.combine(entry_date, entry_time)
+st.sidebar.markdown(f"**選定紀錄時間：** `{entry_datetime.strftime('%Y-%m-%d %H:%M')}`")
 
 # Navigation Tabs
 # Check if streamlit-gsheets-connection is available in the runtime environment
@@ -598,7 +606,7 @@ with tab7:
     st.subheader("📝 本次當班查檢資料預覽")
     
     current_entry = {
-        "填表時間": datetime.datetime.now().strftime('%Y-%m-%d %H:%M'),
+        "填表時間": entry_datetime.strftime('%Y-%m-%d %H:%M'),
         "單位": unit_select,
         "床號": bed_no if bed_no else "未填寫",
         "病患狀態": track_status,
