@@ -143,7 +143,33 @@ entry_date = st.sidebar.date_input("單張日期", value=datetime.date.today(), 
 entry_date_str = entry_date.strftime('%Y-%m-%d')
 st.sidebar.markdown(f"**選定紀錄日期：** `{entry_date_str}`")
 
+
+# Session State & Callbacks for NG (Nasogastric Tube) Synchronization
+if "medras_ng_nurse_key" not in st.session_state:
+    st.session_state["medras_ng_nurse_key"] = "否"
+if "medras_ng_rt_key" not in st.session_state:
+    st.session_state["medras_ng_rt_key"] = "否"
+if "checklist_ng_key" not in st.session_state:
+    st.session_state["checklist_ng_key"] = "無鼻胃管 (標準 leakage <= 45 Lpm)"
+
+def update_ng_from_nurse():
+    val = st.session_state["medras_ng_nurse_key"]
+    st.session_state["medras_ng_rt_key"] = val
+    st.session_state["checklist_ng_key"] = "有插鼻胃管 (標準 leakage <= 60 Lpm)" if val == "是" else "無鼻胃管 (標準 leakage <= 45 Lpm)"
+
+def update_ng_from_rt():
+    val = st.session_state["medras_ng_rt_key"]
+    st.session_state["medras_ng_nurse_key"] = val
+    st.session_state["checklist_ng_key"] = "有插鼻胃管 (標準 leakage <= 60 Lpm)" if val == "是" else "無鼻胃管 (標準 leakage <= 45 Lpm)"
+
+def update_ng_from_checklist():
+    is_yes = "有插鼻胃管" in st.session_state["checklist_ng_key"]
+    val = "是" if is_yes else "否"
+    st.session_state["medras_ng_nurse_key"] = val
+    st.session_state["medras_ng_rt_key"] = val
+
 # Check if streamlit-gsheets-connection is available in the runtime environment
+
 has_gsheets_library = False
 try:
     from streamlit_gsheets import GSheetsConnection
@@ -305,8 +331,9 @@ with tab3:
         medras_ng_select = st.selectbox(
             "1. 臨床上是否有使用鼻胃管 (NG)？", 
             ["否", "是"], 
-            index=0,
-            help="使用鼻胃管會增加管道壓迫風險，適合 F&P 面罩雙側 NG 槽。"
+            key="medras_ng_nurse_key",
+            on_change=update_ng_from_nurse,
+            help="使用鼻胃管會增加管道壓迫風險，適合 F&P 面罩雙側 NG 槽。(已跨頁面智慧連動)"
         )
         medras_skin_select = st.selectbox(
             "2. 臉部配戴面罩處是否有破皮，或屬於易破皮之高風險膚質？", 
@@ -320,8 +347,9 @@ with tab3:
         rt_medras_ng_select = st.selectbox(
             "1. 臨床上是否有使用鼻胃管 (NG)？ (RT版)", 
             ["否", "是"], 
-            index=0,
-            help="RT 評估病患鼻胃管狀態。"
+            key="medras_ng_rt_key",
+            on_change=update_ng_from_rt,
+            help="RT 評估病患鼻胃管狀態。(已跨頁面智慧連動)"
         )
         rt_medras_device_select = st.selectbox(
             "2. 目前使用的減壓設備：", 
@@ -391,8 +419,12 @@ with tab4:
     st.subheader("1. 鼻胃管管路條件")
     has_ng_input = st.selectbox(
         "病患目前是否有插鼻胃管？", 
-        ["無鼻胃管 (標準 leakage <= 45 Lpm)", "有插鼻胃管 (標準 leakage <= 60 Lpm)"]
+        ["無鼻胃管 (標準 leakage <= 45 Lpm)", "有插鼻胃管 (標準 leakage <= 60 Lpm)"],
+        key="checklist_ng_key",
+        on_change=update_ng_from_checklist,
+        help="連動 MedRAS 評估結果，不論在何處切換皆自動同步全單。"
     )
+    st.caption("🔗 **智慧連動提醒：** 鼻胃管 (NG) 狀態已與 MedRAS 小卡 (護理/RT版) 自動同步。更改任意一處，全單自動更新！")
     
     st.divider()
     st.subheader("2. 三班漏氣量與固定帶張力對照輸入 (含「未填寫」遺漏選項)")
