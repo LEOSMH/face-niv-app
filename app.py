@@ -6,7 +6,7 @@ import os
 
 # Set Page Config
 st.set_page_config(
-    page_title="FACE 圈 - NIV 罩護無痕 臨床照護助手 (v13 批次單張KEY單版)",
+    page_title="FACE 圈 - NIV 罩護無痕 臨床照護助手 (v14 精準單張KEY單版)",
     page_icon="🏥",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -138,15 +138,10 @@ bipap_settings = f"{ipap_val}/{epap_val}/{fio2_val}%"
 
 nurse_name = st.sidebar.text_input("KEY單人員 / 護理師簽名", placeholder="請輸入姓名")
 
-st.sidebar.subheader("📅 單張日期與時間 (支援事後補KEY)")
-col_d1, col_d2 = st.sidebar.columns(2)
-with col_d1:
-    entry_date = st.sidebar.date_input("單張日期", value=datetime.date.today(), help="請選擇紙本單張上記錄的日期")
-with col_d2:
-    entry_time = st.sidebar.time_input("KEY單時間", value=datetime.datetime.now().time(), help="可預設或調整KEY單時間")
-
-entry_datetime = datetime.datetime.combine(entry_date, entry_time)
-st.sidebar.markdown(f"**選定紀錄時間：** `{entry_datetime.strftime('%Y-%m-%d %H:%M')}`")
+st.sidebar.subheader("📅 單張日期 (支援事後補KEY)")
+entry_date = st.sidebar.date_input("單張日期", value=datetime.date.today(), help="請選擇紙本單張上記錄的日期")
+entry_date_str = entry_date.strftime('%Y-%m-%d')
+st.sidebar.markdown(f"**選定紀錄日期：** `{entry_date_str}`")
 
 # Check if streamlit-gsheets-connection is available in the runtime environment
 has_gsheets_library = False
@@ -214,6 +209,10 @@ with tab1:
         # Chronological sort
         data_df_sorted = data_df.sort_values(by="填表時間_dt", ascending=True)
         
+        # Calculate global Case Number (收案號碼) for each patient based on earliest chronological appearance
+        first_records = data_df_sorted.drop_duplicates(subset=["病歷號"], keep="first")
+        case_id_map = {chart_no: idx + 1 for idx, chart_no in enumerate(first_records["病歷號"])}
+
         # Group by Chart No (病歷號) to find the latest state of each patient
         latest_records = data_df_sorted.drop_duplicates(subset=["病歷號"], keep="last")
         
@@ -226,17 +225,20 @@ with tab1:
         
         if not active_records.empty:
             display_records = active_records.copy()
+            display_records["收案號碼"] = display_records["病歷號"].map(case_id_map)
             display_records["收案日期/首登時間"] = display_records["病歷號"].map(start_dates)
             display_records["累計查檢單張數"] = display_records["病歷號"].map(check_counts)
             
             cols_to_show = [
-                "單位", "床號", "姓名", "病歷號", "BIPAP設定值", 
+                "收案號碼", "單位", "床號", "姓名", "病歷號", "BIPAP設定值", 
                 "白班皮膚狀況", "小夜皮膚狀況", "大夜皮膚狀況",
                 "減壓執行次數", "收案日期/首登時間", "累計查檢單張數"
             ]
             
             cols_to_show = [c for c in cols_to_show if c in display_records.columns]
             active_list_table = display_records[cols_to_show].reset_index(drop=True)
+            active_list_table.insert(0, "項次", range(1, len(active_list_table) + 1))
+            active_list_table.set_index("項次", inplace=True)
             
             st.subheader("📊 當前在案追蹤病人統計")
             st.success(f"📌 目前共有 **{len(active_list_table)}** 位病患正在進行 2-4 小時定期減壓防護模式。")
@@ -401,19 +403,19 @@ with tab4:
         st.markdown("### ☀️ 白班 (N)")
         leak_val_N = st.number_input("白班 漏氣量 (Lpm)", min_value=0, max_value=120, value=30, step=1, key="leak_val_N")
         leak_status_N = st.selectbox("白班 漏氣量判定", ["合格", "不合格", "未填寫"], index=0, key="leak_status_N")
-        tension_N = st.selectbox("白班 固定帶張力 (2指寬/畫線記號)", ["符合", "太緊 / 太鬆", "未填寫"], index=0, key="tension_N")
+        tension_N = st.selectbox("白班 固定帶張力 (2指寬/畫線記號)", ["符合", "太緊", "太鬆", "未填寫"], index=0, key="tension_N")
         
     with col_shift_HN:
         st.markdown("### 🌆 小夜 (HN)")
         leak_val_HN = st.number_input("小夜 漏氣量 (Lpm)", min_value=0, max_value=120, value=30, step=1, key="leak_val_HN")
         leak_status_HN = st.selectbox("小夜 漏氣量判定", ["合格", "不合格", "未填寫"], index=0, key="leak_status_HN")
-        tension_HN = st.selectbox("小夜 固定帶張力 (2指寬/畫線記號)", ["符合", "太緊 / 太鬆", "未填寫"], index=0, key="tension_HN")
+        tension_HN = st.selectbox("小夜 固定帶張力 (2指寬/畫線記號)", ["符合", "太緊", "太鬆", "未填寫"], index=0, key="tension_HN")
 
     with col_shift_ON:
         st.markdown("### 🌙 大夜 (ON)")
         leak_val_ON = st.number_input("大夜 漏氣量 (Lpm)", min_value=0, max_value=120, value=30, step=1, key="leak_val_ON")
         leak_status_ON = st.selectbox("大夜 漏氣量判定", ["合格", "不合格", "未填寫"], index=0, key="leak_status_ON")
-        tension_ON = st.selectbox("大夜 固定帶張力 (2指寬/畫線記號)", ["符合", "太緊 / 太鬆", "未填寫"], index=0, key="tension_ON")
+        tension_ON = st.selectbox("大夜 固定帶張力 (2指寬/畫線記號)", ["符合", "太緊", "太鬆", "未填寫"], index=0, key="tension_ON")
 
 # TAB 5: DECOMPRESSION MULTI-SELECT CHECKLIST
 with tab5:
@@ -564,7 +566,7 @@ with tab7:
 
     # Construct complete structured current entry for 3 shifts
     current_entry = {
-        "填表時間": entry_datetime.strftime('%Y-%m-%d %H:%M'),
+        "填表時間": entry_date_str,
         "單位": unit_select,
         "床號": bed_no if bed_no else "未填寫",
         "病患狀態": track_status,
