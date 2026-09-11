@@ -428,24 +428,25 @@ with tab4:
     
     st.divider()
     st.subheader("2. 三班漏氣量與固定帶張力對照輸入 (含「未填寫」遺漏選項)")
+    st.caption("💡 **漏氣量預設值說明：** 漏氣數值預設為 `0`。若紙本單張上未特別記錄漏氣數據，維持 0 即代表無特殊異常數據未另外記錄。")
     
     col_shift_N, col_shift_HN, col_shift_ON = st.columns(3)
     
     with col_shift_N:
         st.markdown("### ☀️ 白班 (N)")
-        leak_val_N = st.number_input("白班 漏氣量 (Lpm)", min_value=0, max_value=120, value=30, step=1, key="leak_val_N")
+        leak_val_N = st.number_input("白班 漏氣量 (Lpm)", min_value=0, max_value=120, value=0, step=1, key="leak_val_N")
         leak_status_N = st.selectbox("白班 漏氣量判定", ["合格", "不合格", "未填寫"], index=0, key="leak_status_N")
         tension_N = st.selectbox("白班 固定帶張力 (2指寬/畫線記號)", ["符合", "太緊", "太鬆", "未填寫"], index=0, key="tension_N")
         
     with col_shift_HN:
         st.markdown("### 🌆 小夜 (HN)")
-        leak_val_HN = st.number_input("小夜 漏氣量 (Lpm)", min_value=0, max_value=120, value=30, step=1, key="leak_val_HN")
+        leak_val_HN = st.number_input("小夜 漏氣量 (Lpm)", min_value=0, max_value=120, value=0, step=1, key="leak_val_HN")
         leak_status_HN = st.selectbox("小夜 漏氣量判定", ["合格", "不合格", "未填寫"], index=0, key="leak_status_HN")
         tension_HN = st.selectbox("小夜 固定帶張力 (2指寬/畫線記號)", ["符合", "太緊", "太鬆", "未填寫"], index=0, key="tension_HN")
 
     with col_shift_ON:
         st.markdown("### 🌙 大夜 (ON)")
-        leak_val_ON = st.number_input("大夜 漏氣量 (Lpm)", min_value=0, max_value=120, value=30, step=1, key="leak_val_ON")
+        leak_val_ON = st.number_input("大夜 漏氣量 (Lpm)", min_value=0, max_value=120, value=0, step=1, key="leak_val_ON")
         leak_status_ON = st.selectbox("大夜 漏氣量判定", ["合格", "不合格", "未填寫"], index=0, key="leak_status_ON")
         tension_ON = st.selectbox("大夜 固定帶張力 (2指寬/畫線記號)", ["符合", "太緊", "太鬆", "未填寫"], index=0, key="tension_ON")
 
@@ -515,16 +516,33 @@ with tab6:
         </div>
         """, unsafe_allow_html=True)
         
-        baseline_status = st.selectbox("📌 請選取病患「第一天」上機時臉部 Baseline 膚況：", [
-            "完好 (NL)",
-            "Stage 1",
-            "Stage 2",
-            "Stage 3-4",
-            "DTI",
-            "X (無法分級)",
-            "未填寫"
-        ], index=0)
+        col_base1, col_base2 = st.columns(2)
+        with col_base1:
+            baseline_status = st.selectbox("📌 選取病患「第一天」Baseline 膚況：", [
+                "完好 (NL)",
+                "Stage 1",
+                "Stage 2",
+                "Stage 3-4",
+                "DTI",
+                "X (無法分級)",
+                "未填寫"
+            ], index=0, key="baseline_status_select")
+        with col_base2:
+            if baseline_status not in ["完好 (NL)", "未填寫"]:
+                baseline_site = st.selectbox(
+                    "📍 請選取「第一天」Baseline 受損部位：",
+                    ["鼻樑", "鼻翼", "左臉頰", "右臉頰", "下巴", "額頭", "全臉", "其他/手動輸入"],
+                    index=0,
+                    key="baseline_site_select"
+                )
+                if baseline_site == "其他/手動輸入":
+                    custom_base_site = st.text_input("請輸入自訂 Baseline 部位", placeholder="例：雙側鼻翼", key="custom_base_site")
+                    if custom_base_site:
+                        baseline_site = custom_base_site
+            else:
+                baseline_site = "無"
     else:
+        baseline_site = "N/A"
         st.markdown("""
         <div class='success-box' style='border-left: 5px solid #10B981;'>
             <p style='margin: 0;'>ℹ️ 目前非上機第一天，系統將紀錄三班常規追蹤。請於下方直接選擇三班膚況。</p>
@@ -541,14 +559,38 @@ with tab6:
     with col_skin_N:
         st.markdown("### ☀️ 白班 (N)")
         skin_N = st.selectbox("白班 皮膚狀況", skin_options, index=0, key="skin_N")
+        if skin_N not in ["完好 (NL)", "未填寫"]:
+            skin_site_N = st.selectbox("📍 白班 受損部位", ["鼻樑", "鼻翼", "左臉頰", "右臉頰", "下巴", "額頭", "全臉", "其他/手動輸入"], index=0, key="skin_site_N")
+            if skin_site_N == "其他/手動輸入":
+                custom_N = st.text_input("請輸入白班部位", placeholder="例：右臉頰", key="custom_skin_site_N")
+                if custom_N:
+                    skin_site_N = custom_N
+        else:
+            skin_site_N = "無"
 
     with col_skin_HN:
         st.markdown("### 🌆 小夜 (HN)")
         skin_HN = st.selectbox("小夜 皮膚狀況", skin_options, index=0, key="skin_HN")
+        if skin_HN not in ["完好 (NL)", "未填寫"]:
+            skin_site_HN = st.selectbox("📍 小夜 受損部位", ["鼻樑", "鼻翼", "左臉頰", "右臉頰", "下巴", "額頭", "全臉", "其他/手動輸入"], index=0, key="skin_site_HN")
+            if skin_site_HN == "其他/手動輸入":
+                custom_HN = st.text_input("請輸入小夜部位", placeholder="例：右臉頰", key="custom_skin_site_HN")
+                if custom_HN:
+                    skin_site_HN = custom_HN
+        else:
+            skin_site_HN = "無"
 
     with col_skin_ON:
         st.markdown("### 🌙 大夜 (ON)")
         skin_ON = st.selectbox("大夜 皮膚狀況", skin_options, index=0, key="skin_ON")
+        if skin_ON not in ["完好 (NL)", "未填寫"]:
+            skin_site_ON = st.selectbox("📍 大夜 受損部位", ["鼻樑", "鼻翼", "左臉頰", "右臉頰", "下巴", "額頭", "全臉", "其他/手動輸入"], index=0, key="skin_site_ON")
+            if skin_site_ON == "其他/手動輸入":
+                custom_ON = st.text_input("請輸入大夜部位", placeholder="例：右臉頰", key="custom_skin_site_ON")
+                if custom_ON:
+                    skin_site_ON = custom_ON
+        else:
+            skin_site_ON = "無"
 
     st.divider()
     st.subheader("🚨 臨床照護警示與處理指引")
@@ -593,7 +635,7 @@ with tab7:
         #### **第一步：建立 Google 試算表**
         1. 在您的 Google 雲端硬碟建立一個新的「Google 試算表」，命名標籤頁為 **`Sheet1`**。
         2. 第一列欄標建議包含：
-           `填表時間,單位,床號,病患狀態,姓名,病歷號,當日使用醫囑,BIPAP設定值,是否為初次上機第一天,第一天臉部Baseline皮膚狀況,鼻胃管狀態,白班漏氣量(Lpm),白班漏氣判定,白班固定帶張力,小夜漏氣量(Lpm),小夜漏氣判定,小夜固定帶張力,大夜漏氣量(Lpm),大夜漏氣判定,大夜固定帶張力,已執行減壓時間點,減壓執行次數,減壓備註與未執行原因,白班皮膚狀況,小夜皮膚狀況,大夜皮膚狀況,KEY單人員簽名`
+           `填表時間,單位,床號,病患狀態,姓名,病歷號,當日使用醫囑,BIPAP設定值,是否為初次上機第一天,第一天臉部Baseline皮膚狀況,第一天Baseline受損部位,鼻胃管狀態,白班漏氣量(Lpm),白班漏氣判定,白班固定帶張力,小夜漏氣量(Lpm),小夜漏氣判定,小夜固定帶張力,大夜漏氣量(Lpm),大夜漏氣判定,大夜固定帶張力,已執行減壓時間點,減壓執行次數,減壓備註與未執行原因,白班皮膚狀況,白班皮膚部位,小夜皮膚狀況,小夜皮膚部位,大夜皮膚狀況,大夜皮膚部位,KEY單人員簽名`
         """)
 
     # Construct complete structured current entry for 3 shifts
@@ -607,7 +649,8 @@ with tab7:
         "當日使用醫囑": bipap_order if bipap_order else "未填寫",
         "BIPAP設定值": bipap_settings,
         "是否為初次上機第一天": "是" if is_first_day else "否",
-        "第一天臉部Baseline皮膚狀況": baseline_status.split(" - ")[0] if is_first_day else "N/A",
+        "第一天臉部Baseline皮膚狀況": (f"{baseline_status.split(' - ')[0]} ({baseline_site})" if (is_first_day and baseline_site not in ["無", "N/A"]) else (baseline_status.split(' - ')[0] if is_first_day else "N/A")),
+        "第一天Baseline受損部位": baseline_site if is_first_day else "N/A",
         "鼻胃管狀態": has_ng_input.split(" ")[0],
         "白班漏氣量(Lpm)": leak_val_N,
         "白班漏氣判定": leak_status_N,
@@ -621,9 +664,12 @@ with tab7:
         "已執行減壓時間點": ", ".join(decomp_selected) if decomp_selected else "未勾選",
         "減壓執行次數": len(decomp_selected),
         "減壓備註與未執行原因": full_decomp_note,
-        "白班皮膚狀況": skin_N.split(" - ")[0],
-        "小夜皮膚狀況": skin_HN.split(" - ")[0],
-        "大夜皮膚狀況": skin_ON.split(" - ")[0],
+        "白班皮膚狀況": (f"{skin_N.split(' - ')[0]} ({skin_site_N})" if skin_site_N not in ["無", "N/A"] else skin_N.split(' - ')[0]),
+        "白班皮膚部位": skin_site_N,
+        "小夜皮膚狀況": (f"{skin_HN.split(' - ')[0]} ({skin_site_HN})" if skin_site_HN not in ["無", "N/A"] else skin_HN.split(' - ')[0]),
+        "小夜皮膚部位": skin_site_HN,
+        "大夜皮膚狀況": (f"{skin_ON.split(' - ')[0]} ({skin_site_ON})" if skin_site_ON not in ["無", "N/A"] else skin_ON.split(' - ')[0]),
+        "大夜皮膚部位": skin_site_ON,
         "KEY單人員簽名": nurse_name if nurse_name else "未簽名"
     }
     
