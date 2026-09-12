@@ -1,0 +1,17 @@
+name: Streamlit Keep Alive
+
+on:
+  schedule:
+    # 這裡的設定代表每 6 小時自動執行一次 (時間採國際標準時 UTC)
+    - cron: '0 */6 * * *'
+  workflow_dispatch: # 保留這個按鈕，讓你可以隨時在網頁上手動點擊測試
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Streamlit App
+        run: |
+          # 💡 請把下方的網址替換成你專案真正的 Streamlit App 網址
+          curl -s https://face-niv-app-994aaknhzmrfqouv5wqcma.streamlit.app/ > /dev/null
+          echo "已經成功向 Streamlit 發送點擊請求，App 保溫成功！"
