@@ -432,23 +432,59 @@ with tab4:
     
     col_shift_N, col_shift_HN, col_shift_ON = st.columns(3)
     
+    leak_status_options = ["合格", "不合格", "NA (無使用/已結案)", "未填寫", "其他 (手動填寫原因)"]
+    tension_options = ["符合", "太緊", "太鬆", "NA (無使用/已結案)", "未填寫", "其他 (手動填寫原因)"]
+
     with col_shift_N:
         st.markdown("### ☀️ 白班 (N)")
         leak_val_N = st.number_input("白班 漏氣量 (Lpm)", min_value=0, max_value=120, value=0, step=1, key="leak_val_N")
-        leak_status_N = st.selectbox("白班 漏氣量判定", ["合格", "不合格", "未填寫"], index=0, key="leak_status_N")
-        tension_N = st.selectbox("白班 固定帶張力 (2指寬/畫線記號)", ["符合", "太緊", "太鬆", "未填寫"], index=0, key="tension_N")
+        leak_status_N_select = st.selectbox("白班 漏氣量判定", leak_status_options, index=0, key="leak_status_N_select")
+        if leak_status_N_select == "其他 (手動填寫原因)":
+            custom_leak_N = st.text_input("請填寫白班漏氣備註原因", placeholder="例：病人拒絕使用", key="custom_leak_N")
+            leak_status_N = f"其他 ({custom_leak_N})" if custom_leak_N else "其他"
+        else:
+            leak_status_N = leak_status_N_select
+
+        tension_N_select = st.selectbox("白班 固定帶張力 (2指寬/畫線記號)", tension_options, index=0, key="tension_N_select")
+        if tension_N_select == "其他 (手動填寫原因)":
+            custom_tension_N = st.text_input("請填寫白班張力備註原因", placeholder="例：病人拒絕配戴", key="custom_tension_N")
+            tension_N = f"其他 ({custom_tension_N})" if custom_tension_N else "其他"
+        else:
+            tension_N = tension_N_select
         
     with col_shift_HN:
         st.markdown("### 🌆 小夜 (HN)")
         leak_val_HN = st.number_input("小夜 漏氣量 (Lpm)", min_value=0, max_value=120, value=0, step=1, key="leak_val_HN")
-        leak_status_HN = st.selectbox("小夜 漏氣量判定", ["合格", "不合格", "未填寫"], index=0, key="leak_status_HN")
-        tension_HN = st.selectbox("小夜 固定帶張力 (2指寬/畫線記號)", ["符合", "太緊", "太鬆", "未填寫"], index=0, key="tension_HN")
+        leak_status_HN_select = st.selectbox("小夜 漏氣量判定", leak_status_options, index=0, key="leak_status_HN_select")
+        if leak_status_HN_select == "其他 (手動填寫原因)":
+            custom_leak_HN = st.text_input("請填寫小夜漏氣備註原因", placeholder="例：病人拒絕使用", key="custom_leak_HN")
+            leak_status_HN = f"其他 ({custom_leak_HN})" if custom_leak_HN else "其他"
+        else:
+            leak_status_HN = leak_status_HN_select
+
+        tension_HN_select = st.selectbox("小夜 固定帶張力 (2指寬/畫線記號)", tension_options, index=0, key="tension_HN_select")
+        if tension_HN_select == "其他 (手動填寫原因)":
+            custom_tension_HN = st.text_input("請填寫小夜張力備註原因", placeholder="例：病人拒絕配戴", key="custom_tension_HN")
+            tension_HN = f"其他 ({custom_tension_HN})" if custom_tension_HN else "其他"
+        else:
+            tension_HN = tension_HN_select
 
     with col_shift_ON:
         st.markdown("### 🌙 大夜 (ON)")
         leak_val_ON = st.number_input("大夜 漏氣量 (Lpm)", min_value=0, max_value=120, value=0, step=1, key="leak_val_ON")
-        leak_status_ON = st.selectbox("大夜 漏氣量判定", ["合格", "不合格", "未填寫"], index=0, key="leak_status_ON")
-        tension_ON = st.selectbox("大夜 固定帶張力 (2指寬/畫線記號)", ["符合", "太緊", "太鬆", "未填寫"], index=0, key="tension_ON")
+        leak_status_ON_select = st.selectbox("大夜 漏氣量判定", leak_status_options, index=0, key="leak_status_ON_select")
+        if leak_status_ON_select == "其他 (手動填寫原因)":
+            custom_leak_ON = st.text_input("請填寫大夜漏氣備註原因", placeholder="例：病人拒絕使用", key="custom_leak_ON")
+            leak_status_ON = f"其他 ({custom_leak_ON})" if custom_leak_ON else "其他"
+        else:
+            leak_status_ON = leak_status_ON_select
+
+        tension_ON_select = st.selectbox("大夜 固定帶張力 (2指寬/畫線記號)", tension_options, index=0, key="tension_ON_select")
+        if tension_ON_select == "其他 (手動填寫原因)":
+            custom_tension_ON = st.text_input("請填寫大夜張力備註原因", placeholder="例：病人拒絕配戴", key="custom_tension_ON")
+            tension_ON = f"其他 ({custom_tension_ON})" if custom_tension_ON else "其他"
+        else:
+            tension_ON = tension_ON_select
 
 # TAB 5: DECOMPRESSION MULTI-SELECT CHECKLIST
 with tab5:
@@ -505,6 +541,7 @@ with tab6:
     )
     
     baseline_status = "N/A (非第一天)"
+    baseline_options = ["完好 (NL)", "Stage 1", "Stage 2", "Stage 3-4", "DTI", "X (無法分級)", "NA (無使用/已結案)", "未填寫", "其他 (手動填寫原因)"]
     if is_first_day:
         st.markdown("""
         <div class='alert-box' style='border-left: 8px solid #F59E0B;'>
@@ -518,17 +555,15 @@ with tab6:
         
         col_base1, col_base2 = st.columns(2)
         with col_base1:
-            baseline_status = st.selectbox("📌 選取病患「第一天」Baseline 膚況：", [
-                "完好 (NL)",
-                "Stage 1",
-                "Stage 2",
-                "Stage 3-4",
-                "DTI",
-                "X (無法分級)",
-                "未填寫"
-            ], index=0, key="baseline_status_select")
+            baseline_status_select = st.selectbox("📌 選取病患「第一天」Baseline 膚況：", baseline_options, index=0, key="baseline_status_select")
+            if baseline_status_select == "其他 (手動填寫原因)":
+                custom_base_reason = st.text_input("請輸入 Baseline 備註原因", placeholder="例：病人拒絕評估", key="custom_base_reason")
+                baseline_status = f"其他 ({custom_base_reason})" if custom_base_reason else "其他"
+            else:
+                baseline_status = baseline_status_select
+
         with col_base2:
-            if baseline_status not in ["完好 (NL)", "未填寫"]:
+            if baseline_status not in ["完好 (NL)", "未填寫", "NA (無使用/已結案)"] and not baseline_status.startswith("其他"):
                 baseline_site = st.selectbox(
                     "📍 請選取「第一天」Baseline 受損部位：",
                     ["鼻樑", "鼻翼", "左臉頰", "右臉頰", "下巴", "額頭", "全臉", "其他/手動輸入"],
@@ -550,47 +585,65 @@ with tab6:
         """, unsafe_allow_html=True)
 
     st.markdown("---")
-    st.subheader("📋 2. 當日三班臉部皮膚完整度評估 (含「未填寫」遺漏選項)")
+    st.subheader("📋 2. 當日三班臉部皮膚完整度評估 (含「NA」與「其他」選項)")
     
-    skin_options = ["完好 (NL)", "Stage 1", "Stage 2", "Stage 3-4", "DTI", "X (無法分級)", "未填寫"]
+    skin_options = ["完好 (NL)", "Stage 1", "Stage 2", "Stage 3-4", "DTI", "X (無法分級)", "NA (無使用/已結案)", "未填寫", "其他 (手動填寫原因)"]
     
     col_skin_N, col_skin_HN, col_skin_ON = st.columns(3)
     
     with col_skin_N:
         st.markdown("### ☀️ 白班 (N)")
-        skin_N = st.selectbox("白班 皮膚狀況", skin_options, index=0, key="skin_N")
-        if skin_N not in ["完好 (NL)", "未填寫"]:
-            skin_site_N = st.selectbox("📍 白班 受損部位", ["鼻樑", "鼻翼", "左臉頰", "右臉頰", "下巴", "額頭", "全臉", "其他/手動輸入"], index=0, key="skin_site_N")
-            if skin_site_N == "其他/手動輸入":
-                custom_N = st.text_input("請輸入白班部位", placeholder="例：右臉頰", key="custom_skin_site_N")
-                if custom_N:
-                    skin_site_N = custom_N
-        else:
+        skin_N_select = st.selectbox("白班 皮膚狀況", skin_options, index=0, key="skin_N_select")
+        if skin_N_select == "其他 (手動填寫原因)":
+            custom_skin_N = st.text_input("請輸入白班皮膚原因", placeholder="例：病人拒絕", key="custom_skin_reason_N")
+            skin_N = f"其他 ({custom_skin_N})" if custom_skin_N else "其他"
             skin_site_N = "無"
+        else:
+            skin_N = skin_N_select
+            if skin_N in ["Stage 1", "Stage 2", "Stage 3-4", "DTI", "X (無法分級)"]:
+                skin_site_N = st.selectbox("📍 白班 受損部位", ["鼻樑", "鼻翼", "左臉頰", "右臉頰", "下巴", "額頭", "全臉", "其他/手動輸入"], index=0, key="skin_site_N")
+                if skin_site_N == "其他/手動輸入":
+                    custom_N = st.text_input("請輸入白班部位", placeholder="例：右臉頰", key="custom_skin_site_N")
+                    if custom_N:
+                        skin_site_N = custom_N
+            else:
+                skin_site_N = "無"
 
     with col_skin_HN:
         st.markdown("### 🌆 小夜 (HN)")
-        skin_HN = st.selectbox("小夜 皮膚狀況", skin_options, index=0, key="skin_HN")
-        if skin_HN not in ["完好 (NL)", "未填寫"]:
-            skin_site_HN = st.selectbox("📍 小夜 受損部位", ["鼻樑", "鼻翼", "左臉頰", "右臉頰", "下巴", "額頭", "全臉", "其他/手動輸入"], index=0, key="skin_site_HN")
-            if skin_site_HN == "其他/手動輸入":
-                custom_HN = st.text_input("請輸入小夜部位", placeholder="例：右臉頰", key="custom_skin_site_HN")
-                if custom_HN:
-                    skin_site_HN = custom_HN
-        else:
+        skin_HN_select = st.selectbox("小夜 皮膚狀況", skin_options, index=0, key="skin_HN_select")
+        if skin_HN_select == "其他 (手動填寫原因)":
+            custom_skin_HN = st.text_input("請輸入小夜皮膚原因", placeholder="例：病人拒絕", key="custom_skin_reason_HN")
+            skin_HN = f"其他 ({custom_skin_HN})" if custom_skin_HN else "其他"
             skin_site_HN = "無"
+        else:
+            skin_HN = skin_HN_select
+            if skin_HN in ["Stage 1", "Stage 2", "Stage 3-4", "DTI", "X (無法分級)"]:
+                skin_site_HN = st.selectbox("📍 小夜 受損部位", ["鼻樑", "鼻翼", "左臉頰", "右臉頰", "下巴", "額頭", "全臉", "其他/手動輸入"], index=0, key="skin_site_HN")
+                if skin_site_HN == "其他/手動輸入":
+                    custom_HN = st.text_input("請輸入小夜部位", placeholder="例：右臉頰", key="custom_skin_site_HN")
+                    if custom_HN:
+                        skin_site_HN = custom_HN
+            else:
+                skin_site_HN = "無"
 
     with col_skin_ON:
         st.markdown("### 🌙 大夜 (ON)")
-        skin_ON = st.selectbox("大夜 皮膚狀況", skin_options, index=0, key="skin_ON")
-        if skin_ON not in ["完好 (NL)", "未填寫"]:
-            skin_site_ON = st.selectbox("📍 大夜 受損部位", ["鼻樑", "鼻翼", "左臉頰", "右臉頰", "下巴", "額頭", "全臉", "其他/手動輸入"], index=0, key="skin_site_ON")
-            if skin_site_ON == "其他/手動輸入":
-                custom_ON = st.text_input("請輸入大夜部位", placeholder="例：右臉頰", key="custom_skin_site_ON")
-                if custom_ON:
-                    skin_site_ON = custom_ON
-        else:
+        skin_ON_select = st.selectbox("大夜 皮膚狀況", skin_options, index=0, key="skin_ON_select")
+        if skin_ON_select == "其他 (手動填寫原因)":
+            custom_skin_ON = st.text_input("請輸入大夜皮膚原因", placeholder="例：病人拒絕", key="custom_skin_reason_ON")
+            skin_ON = f"其他 ({custom_skin_ON})" if custom_skin_ON else "其他"
             skin_site_ON = "無"
+        else:
+            skin_ON = skin_ON_select
+            if skin_ON in ["Stage 1", "Stage 2", "Stage 3-4", "DTI", "X (無法分級)"]:
+                skin_site_ON = st.selectbox("📍 大夜 受損部位", ["鼻樑", "鼻翼", "左臉頰", "右臉頰", "下巴", "額頭", "全臉", "其他/手動輸入"], index=0, key="skin_site_ON")
+                if skin_site_ON == "其他/手動輸入":
+                    custom_ON = st.text_input("請輸入大夜部位", placeholder="例：右臉頰", key="custom_skin_site_ON")
+                    if custom_ON:
+                        skin_site_ON = custom_ON
+            else:
+                skin_site_ON = "無"
 
     st.divider()
     st.subheader("🚨 臨床照護警示與處理指引")
