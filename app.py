@@ -330,14 +330,14 @@ with tab3:
         st.subheader("👩‍⚕️ 護理師 MedRAS 評估")
         medras_ng_select = st.selectbox(
             "1. 臨床上是否有使用鼻胃管 (NG)？", 
-            ["否", "是"], 
+            ["否", "是", "未填寫"], 
             key="medras_ng_nurse_key",
             on_change=update_ng_from_nurse,
             help="使用鼻胃管會增加管道壓迫風險，適合 F&P 面罩雙側 NG 槽。(已跨頁面智慧連動)"
         )
         medras_skin_select = st.selectbox(
             "2. 臉部配戴面罩處是否有破皮，或屬於易破皮之高風險膚質？", 
-            ["否", "是"], 
+            ["否", "是", "未填寫"], 
             index=0,
             help="高風險脆弱膚質或已有壓傷者，建議更換低壓面罩。"
         )
@@ -346,26 +346,26 @@ with tab3:
         st.subheader("🩺 呼吸治療師 (RT) MedRAS 評估")
         rt_medras_ng_select = st.selectbox(
             "1. 臨床上是否有使用鼻胃管 (NG)？ (RT版)", 
-            ["否", "是"], 
+            ["否", "是", "未填寫"], 
             key="medras_ng_rt_key",
             on_change=update_ng_from_rt,
             help="RT 評估病患鼻胃管狀態。(已跨頁面智慧連動)"
         )
         rt_medras_device_select = st.selectbox(
             "2. 目前使用的減壓設備：", 
-            ["無", "紗布", "減壓墊"], 
+            ["無", "紗布", "減壓墊", "未填寫"], 
             index=0,
             help="若已需使用紗布或減壓墊，顯示患者臉部有受壓痕跡或不適。"
         )
         rt_medras_skin_select = st.selectbox(
             "3. 臉部配戴面罩處是否有破皮？ (RT版)", 
-            ["否", "是"], 
+            ["否", "是", "未填寫"], 
             index=0,
             help="RT 評估臉部配戴處是否有破皮。"
         )
         rt_medras_suit_select = st.selectbox(
             "4. 面罩是否適合病人？ (Ex: 臉凹、介於現有 S/M/L 尺寸中間)", 
-            ["是", "否"], 
+            ["是", "否", "未填寫"], 
             index=0,
             help="若選擇『否』，代表現有面罩與病患臉型不適配，極易造成大漏氣或局部壓迫。"
         )
@@ -385,6 +385,8 @@ with tab3:
         if rt_medras_device_select in ["紗布", "減壓墊"]: triggers.append(f"RT評估：已使用減壓設備 ({rt_medras_device_select})")
         if rt_medras_skin_select == "是": triggers.append("RT評估：臉部配戴處已有破皮")
         if rt_medras_suit_select == "否": triggers.append("RT評估：面罩不適合病人 (臉凹或尺寸中間)")
+
+        medras_recommendation = "強烈建議自費 F&P 面罩" if has_risk else "可先使用公費面罩"
 
         if has_risk:
             reasons_html = "".join([f"<li>{t}</li>" for t in triggers])
@@ -688,7 +690,7 @@ with tab7:
         #### **第一步：建立 Google 試算表**
         1. 在您的 Google 雲端硬碟建立一個新的「Google 試算表」，命名標籤頁為 **`Sheet1`**。
         2. 第一列欄標建議包含：
-           `填表時間,單位,床號,病患狀態,姓名,病歷號,當日使用醫囑,BIPAP設定值,是否為初次上機第一天,第一天臉部Baseline皮膚狀況,第一天Baseline受損部位,鼻胃管狀態,白班漏氣量(Lpm),白班漏氣判定,白班固定帶張力,小夜漏氣量(Lpm),小夜漏氣判定,小夜固定帶張力,大夜漏氣量(Lpm),大夜漏氣判定,大夜固定帶張力,已執行減壓時間點,減壓執行次數,減壓備註與未執行原因,白班皮膚狀況,白班皮膚部位,小夜皮膚狀況,小夜皮膚部位,大夜皮膚狀況,大夜皮膚部位,KEY單人員簽名`
+           `填表時間,單位,床號,病患狀態,姓名,病歷號,當日使用醫囑,BIPAP設定值,是否為初次上機第一天,第一天臉部Baseline皮膚狀況,第一天Baseline受損部位,MedRAS護理_是否使用NG,MedRAS護理_臉部皮膚風險,MedRAS_RT_是否使用NG,MedRAS_RT_減壓設備,MedRAS_RT_臉部皮膚破皮,MedRAS_RT_面罩適合度,MedRAS_系統建議面罩,鼻胃管狀態,白班漏氣量(Lpm),白班漏氣判定,白班固定帶張力,小夜漏氣量(Lpm),小夜漏氣判定,小夜固定帶張力,大夜漏氣量(Lpm),大夜漏氣判定,大夜固定帶張力,已執行減壓時間點,減壓執行次數,減壓備註與未執行原因,白班皮膚狀況,白班皮膚部位,小夜皮膚狀況,小夜皮膚部位,大夜皮膚狀況,大夜皮膚部位,KEY單人員簽名`
         """)
 
     # Construct complete structured current entry for 3 shifts
@@ -704,6 +706,13 @@ with tab7:
         "是否為初次上機第一天": "是" if is_first_day else "否",
         "第一天臉部Baseline皮膚狀況": (f"{baseline_status.split(' - ')[0]} ({baseline_site})" if (is_first_day and baseline_site not in ["無", "N/A"]) else (baseline_status.split(' - ')[0] if is_first_day else "N/A")),
         "第一天Baseline受損部位": baseline_site if is_first_day else "N/A",
+        "MedRAS護理_是否使用NG": medras_ng_select,
+        "MedRAS護理_臉部皮膚風險": medras_skin_select,
+        "MedRAS_RT_是否使用NG": rt_medras_ng_select,
+        "MedRAS_RT_減壓設備": rt_medras_device_select,
+        "MedRAS_RT_臉部皮膚破皮": rt_medras_skin_select,
+        "MedRAS_RT_面罩適合度": rt_medras_suit_select,
+        "MedRAS_系統建議面罩": medras_recommendation,
         "鼻胃管狀態": has_ng_input.split(" ")[0],
         "白班漏氣量(Lpm)": leak_val_N,
         "白班漏氣判定": leak_status_N,
