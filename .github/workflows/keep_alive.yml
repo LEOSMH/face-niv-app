@@ -17,5 +17,8 @@ jobs:
           
           # 第二個 App (請直接把下方的範例網址刪除，改成你另一個 App 的真正網址)
           curl -s https://face-niv-app-994aaknhzmrfqouv5wqcma.streamlit.app/ > /dev/null
+
+          # 第三個 App
+          curl -s https://facenivcarenr-idnrutlbzfmgedmftx3w5k.streamlit.app/ > /dev/null
           
           echo "所有 App 均已保溫成功！"
