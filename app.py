@@ -184,13 +184,13 @@ if has_gsheets_library and "connections" in st.secrets and "gsheets" in st.secre
 
 # Navigation Tabs
 tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
-    "👥 今日巡查在案名單",
-    "📋 照護流程主軸", 
-    "🔍 MedRAS 智能評估小卡", 
-    "📊 最佳壓力區間查檢單 (三班KEY單)", 
-    "⏰ 定期減壓時間點勾稽與備註", 
-    "🛡️ 臉部皮膚完整度評估 (三班KEY單)",
-    "💾 查檢紀錄儲存與雲端同步匯出"
+    "👥 收案名單",
+    "📋 照護流程圖", 
+    "🔍 MedRAS評估", 
+    "📊 漏氣與綁帶勾稽", 
+    "⏰ 減壓時間點勾稽", 
+    "🛡️ 臉部皮膚評估",
+    "💾 紀錄儲存與雲端同步匯出"
 ])
 
 # Variables to share across tabs for saving data
