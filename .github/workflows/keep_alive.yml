@@ -12,6 +12,10 @@ jobs:
     steps:
       - name: Ping Streamlit App
         run: |
-          # 💡 請把下方的網址替換成你專案真正的 Streamlit App 網址
+          # 第一個 App
+          curl -s https://ards-vr-deadspace-calculator-cnef9rfpdr9579mnm9rccr.streamlit.app/ > /dev/null
+          
+          # 第二個 App (請直接把下方的範例網址刪除，改成你另一個 App 的真正網址)
           curl -s https://face-niv-app-994aaknhzmrfqouv5wqcma.streamlit.app/ > /dev/null
-          echo "已經成功向 Streamlit 發送點擊請求，App 保溫成功！"
+          
+          echo "所有 App 均已保溫成功！"
