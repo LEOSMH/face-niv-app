@@ -6,7 +6,7 @@ import os
 
 # Set Page Config
 st.set_page_config(
-    page_title="FACE 圈 - NIV 罩護無痕 臨床照護助手 (v14 精準單張KEY單版)",
+    page_title="FACE 圈 - NIV 罩護無痕 臨床照護助手 (v23 精簡標題版)",
     page_icon="🏥",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -104,6 +104,7 @@ st.sidebar.markdown("""
 **C**omfort (舒適防護)
 **E**limination (消除壓傷)
 """)
+st.sidebar.caption("👨‍⚕️ **系統製作人：** 呼吸治療師 辛明翰\n📅 **製作日期：** 初版 2026.09.07 (更新版 2026.09.12)")
 st.sidebar.divider()
 
 st.sidebar.subheader("👤 病患基本資料登記")
@@ -185,11 +186,11 @@ if has_gsheets_library and "connections" in st.secrets and "gsheets" in st.secre
 # Navigation Tabs
 tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
     "👥 收案名單",
-    "📋 照護流程圖", 
-    "🔍 MedRAS評估", 
-    "📊 漏氣與綁帶勾稽", 
-    "⏰ 減壓時間點勾稽", 
-    "🛡️ 臉部皮膚評估",
+    "📋 照護流程主軸&示範影片", 
+    "🔍 MedRAS評估小卡(Nr&RT)", 
+    "📊 漏氣量和綁帶確認", 
+    "⏰ 4小時定期減壓", 
+    "🛡️ 臉部皮膚完整度評估",
     "💾 紀錄儲存與雲端同步匯出"
 ])
 
@@ -369,6 +370,21 @@ with tab3:
             index=0,
             help="若選擇『否』，代表現有面罩與病患臉型不適配，極易造成大漏氣或局部壓迫。"
         )
+        
+        st.write("") # Spacer
+        st.subheader("🎭 面罩款式登記")
+        mask_type_select = st.selectbox(
+            "請選取面罩款式：", 
+            ["公費", "自費", "其他 (可自己填寫)"], 
+            index=0,
+            key="mask_type_select_key",
+            help="記錄病患目前使用的面罩款式（如公費標準面罩、自費 F&P 面罩或其他款式）。"
+        )
+        if mask_type_select == "其他 (可自己填寫)":
+            custom_mask_type = st.text_input("請輸入自訂面罩款式名稱/說明", placeholder="例：Wizard / 奇美自備款", key="custom_mask_type_key")
+            mask_type_val = f"其他 ({custom_mask_type})" if custom_mask_type else "其他"
+        else:
+            mask_type_val = mask_type_select
         
     with col2:
         st.subheader("💡 系統評估與決策建議")
@@ -690,7 +706,7 @@ with tab7:
         #### **第一步：建立 Google 試算表**
         1. 在您的 Google 雲端硬碟建立一個新的「Google 試算表」，命名標籤頁為 **`Sheet1`**。
         2. 第一列欄標建議包含：
-           `填表時間,單位,床號,病患狀態,姓名,病歷號,當日使用醫囑,BIPAP設定值,是否為初次上機第一天,第一天臉部Baseline皮膚狀況,第一天Baseline受損部位,MedRAS護理_是否使用NG,MedRAS護理_臉部皮膚風險,MedRAS_RT_是否使用NG,MedRAS_RT_減壓設備,MedRAS_RT_臉部皮膚破皮,MedRAS_RT_面罩適合度,MedRAS_系統建議面罩,鼻胃管狀態,白班漏氣量(Lpm),白班漏氣判定,白班固定帶張力,小夜漏氣量(Lpm),小夜漏氣判定,小夜固定帶張力,大夜漏氣量(Lpm),大夜漏氣判定,大夜固定帶張力,已執行減壓時間點,減壓執行次數,減壓備註與未執行原因,白班皮膚狀況,白班皮膚部位,小夜皮膚狀況,小夜皮膚部位,大夜皮膚狀況,大夜皮膚部位,KEY單人員簽名`
+           `填表時間,單位,床號,病患狀態,姓名,病歷號,當日使用醫囑,BIPAP設定值,是否為初次上機第一天,第一天臉部Baseline皮膚狀況,第一天Baseline受損部位,MedRAS護理_是否使用NG,MedRAS護理_臉部皮膚風險,MedRAS_RT_是否使用NG,MedRAS_RT_減壓設備,MedRAS_RT_臉部皮膚破皮,MedRAS_RT_面罩適合度,面罩款式,MedRAS_系統建議面罩,鼻胃管狀態,白班漏氣量(Lpm),白班漏氣判定,白班固定帶張力,小夜漏氣量(Lpm),小夜漏氣判定,小夜固定帶張力,大夜漏氣量(Lpm),大夜漏氣判定,大夜固定帶張力,已執行減壓時間點,減壓執行次數,減壓備註與未執行原因,白班皮膚狀況,白班皮膚部位,小夜皮膚狀況,小夜皮膚部位,大夜皮膚狀況,大夜皮膚部位,KEY單人員簽名`
         """)
 
     # Construct complete structured current entry for 3 shifts
@@ -712,6 +728,7 @@ with tab7:
         "MedRAS_RT_減壓設備": rt_medras_device_select,
         "MedRAS_RT_臉部皮膚破皮": rt_medras_skin_select,
         "MedRAS_RT_面罩適合度": rt_medras_suit_select,
+        "面罩款式": mask_type_val,
         "MedRAS_系統建議面罩": medras_recommendation,
         "鼻胃管狀態": has_ng_input.split(" ")[0],
         "白班漏氣量(Lpm)": leak_val_N,
@@ -810,4 +827,10 @@ with tab7:
 
 # Footer
 st.divider()
-st.markdown("© 2026 國立臺灣大學醫學院附設醫院 - FACE 圈 | 罩護無痕品管專案 | 呼吸治療科、護理部、醫工部、品質管理中心聯合敬製")
+st.markdown("""
+<div style='text-align: center; color: #4B5563; font-size: 14px; line-height: 1.6;'>
+    <p style='margin-bottom: 4px;'><b>© 2026 國立臺灣大學醫學院附設醫院 - FACE 圈 | 罩護無痕品管專案</b></p>
+    <p style='margin-bottom: 4px;'>綜合診療部呼吸診療科、護理部、醫工部、品質管理中心聯合敬製</p>
+    <p style='margin-bottom: 0px;'><b>👨‍⚕️ 系統製作人：</b> 呼吸治療師 辛明翰 &nbsp;|&nbsp; <b>📅 製作日期：</b> 初版 2026.09.07 &nbsp;•&nbsp; 更新版 2026.09.12</p>
+</div>
+""", unsafe_allow_html=True)
