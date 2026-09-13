@@ -104,7 +104,7 @@ st.sidebar.markdown("""
 **C**omfort (舒適防護)
 **E**limination (消除壓傷)
 """)
-st.sidebar.caption("👨‍⚕️ **系統製作人：** 呼吸治療師 辛明翰\n📅 **製作日期：** 初版 2026.09.07 (更新版 2026.09.12)")
+st.sidebar.caption("👨‍⚕️ **系統製作人：** 呼吸治療師 辛明翰\n📅 **製作日期：** 初版 2026.09.07 (更新版 2026.09.13)")
 st.sidebar.divider()
 
 st.sidebar.subheader("👤 病患基本資料登記")
@@ -831,6 +831,6 @@ st.markdown("""
 <div style='text-align: center; color: #4B5563; font-size: 14px; line-height: 1.6;'>
     <p style='margin-bottom: 4px;'><b>© 2026 國立臺灣大學醫學院附設醫院 - FACE 圈 | 罩護無痕品管專案</b></p>
     <p style='margin-bottom: 4px;'>綜合診療部呼吸診療科、護理部、醫工部、品質管理中心聯合敬製</p>
-    <p style='margin-bottom: 0px;'><b>👨‍⚕️ 系統製作人：</b> 呼吸治療師 辛明翰 &nbsp;|&nbsp; <b>📅 製作日期：</b> 初版 2026.09.07 &nbsp;•&nbsp; 更新版 2026.09.12</p>
+    <p style='margin-bottom: 0px;'><b>👨‍⚕️ 系統製作人：</b> 呼吸治療師 辛明翰 &nbsp;|&nbsp; <b>📅 製作日期：</b> 初版 2026.09.07 &nbsp;•&nbsp; 更新版 2026.09.13</p>
 </div>
 """, unsafe_allow_html=True)
