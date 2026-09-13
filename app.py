@@ -186,11 +186,11 @@ if has_gsheets_library and "connections" in st.secrets and "gsheets" in st.secre
 # Navigation Tabs
 tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
     "👥 收案名單",
-    "📋 照護流程主軸&示範影片", 
-    "🔍 MedRAS評估小卡(Nr&RT)", 
+    "📋 照護流程", 
+    "🔍 MedRAS評估", 
     "📊 漏氣量和綁帶確認", 
     "⏰ 4小時定期減壓", 
-    "🛡️ 臉部皮膚完整度評估",
+    "🛡️ 臉部皮膚評估",
     "💾 紀錄儲存與雲端同步匯出"
 ])
 
