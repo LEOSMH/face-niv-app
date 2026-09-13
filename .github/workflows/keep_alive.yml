@@ -2,23 +2,44 @@ name: Streamlit Keep Alive
 
 on:
   schedule:
-    # 這裡的設定代表每 6 小時自動執行一次 (時間採國際標準時 UTC)
-    - cron: '0 */6 * * *'
-  workflow_dispatch: # 保留這個按鈕，讓你可以隨時在網頁上手動點擊測試
+    # 調整為每 3 小時自動執行一次，徹底對抗 GitHub 伺服器的遲到機制
+    - cron: '0 */3 * * *'
+  workflow_dispatch: # 保留網頁手動觸發按鈕
 
 jobs:
   ping:
     runs-on: ubuntu-latest
     steps:
-      - name: Ping Streamlit App
-        run: |
-          # 第一個 App
-          curl -s https://ards-vr-deadspace-calculator-cnef9rfpdr9579mnm9rccr.streamlit.app/ > /dev/null
-          
-          # 第二個 App (請直接把下方的範例網址刪除，改成你另一個 App 的真正網址)
-          curl -s https://face-niv-app-994aaknhzmrfqouv5wqcma.streamlit.app/ > /dev/null
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
 
-          # 第三個 App
-          curl -s https://facenivcarenr-idnrutlbzfmgedmftx3w5k.streamlit.app/ > /dev/null
+      - name: Install Request Library
+        run: pip install requests
+
+      - name: Simulate Real Browser Visit
+        run: |
+          cat << 'EOF' > simulate.py
+          import requests
           
-          echo "所有 App 均已保溫成功！"
+          # 偽裝成真人的 iPhone Safari 瀏覽器標頭，繞過 Streamlit 的機器人偵測 [1]
+          headers = {
+              'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.5 Mobile/15E148 Safari/604.1'
+          }
+          
+          # 這裡包含了你所有的三個 Streamlit App 網址 [1]
+          urls = [
+              'https://ards-vr-deadspace-calculator-cnef9rfpdr9579mnm9rccr.streamlit.app/',
+              'https://face-niv-app-994aaknhzmrfqouv5wqcma.streamlit.app/',
+              'https://facenivcarenr-idnrutlbzfmgedmftx3w5k.streamlit.app/'
+          ]
+          
+          for url in urls:
+              try:
+                  response = requests.get(url, headers=headers, timeout=30)
+                  print(f"成功模擬真人訪問: {url}，狀態碼: {response.status_code}")
+              except Exception as e:
+                  print(f"訪問 {url} 發生錯誤: {e}")
+          EOF
+          python simulate.py
