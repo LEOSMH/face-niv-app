@@ -385,6 +385,32 @@ with tab1:
             """)
         else:
             st.info("🎉 恭喜！目前無任何在案追蹤病患。所有收案病人都已順利結案。")
+
+        # Closed Cases Section
+        st.divider()
+        closed_records = latest_records[latest_records["病患狀態"] == "結案/停用BIPAP (結案)"]
+        if not closed_records.empty:
+            closed_display = closed_records.copy()
+            closed_display["收案號碼"] = closed_display["病歷號"].map(case_id_map)
+            closed_display["首登時間"] = closed_display["病歷號"].map(start_dates)
+            closed_display["結案時間"] = closed_display["填表時間"]
+            closed_display["累計查檢單張數"] = closed_display["病歷號"].map(check_counts)
+            
+            cols_closed = [
+                "收案號碼", "單位", "床號", "姓名", "病歷號", "BIPAP設定值", 
+                "首登時間", "結案時間", "累計查檢單張數"
+            ]
+            cols_closed = [c for c in cols_closed if c in closed_display.columns]
+            closed_table = closed_display[cols_closed].reset_index(drop=True)
+            closed_table.insert(0, "項次", range(1, len(closed_table) + 1))
+            closed_table.set_index("項次", inplace=True)
+            
+            st.subheader("📁 已結案病患歷史清單 (Closed Cases)")
+            st.caption(f"📌 目前共有 **{len(closed_table)}** 位病患已完成照護流程或停用 BIPAP 結案。資料皆即時來自 Google Sheets 雲端資料庫。")
+            st.dataframe(closed_table, use_container_width=True)
+        else:
+            st.subheader("📁 已結案病患歷史清單 (Closed Cases)")
+            st.caption("ℹ️ 目前尚無已結案之病患紀錄。")
     else:
         st.info("💡 雲端資料庫目前尚無收案紀錄。當同仁KEY入首筆單張紀錄後，此處將會自動呈現即時的每日巡查追蹤名單！")
 
