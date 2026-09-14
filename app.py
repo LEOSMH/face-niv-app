@@ -104,14 +104,121 @@ st.sidebar.markdown("""
 **C**omfort (舒適防護)
 **E**limination (消除壓傷)
 """)
-st.sidebar.caption("👨‍⚕️ **系統製作人：** 呼吸治療師 辛明翰\n📅 **製作日期：** 初版 2026.09.07 (更新版 2026.09.13)")
+st.sidebar.caption("👨‍⚕️ **系統製作人：** 呼吸治療師 辛明翰\n📅 **製作日期：** 初版 2026.09.07 (更新版 2026.09.14)")
 st.sidebar.divider()
 
+
+# Check if streamlit-gsheets-connection is available in the runtime environment
+has_gsheets_library = False
+try:
+    from streamlit_gsheets import GSheetsConnection
+    has_gsheets_library = True
+except ImportError:
+    pass
+
+cloud_sync_enabled = False
+if has_gsheets_library and "connections" in st.secrets and "gsheets" in st.secrets["connections"]:
+    cloud_sync_enabled = True
+
+if "temp_records" not in st.session_state:
+    st.session_state.temp_records = []
+
+# Fetch active patient records early for quick sidebar auto-fill
+early_data_df = None
+if cloud_sync_enabled:
+    try:
+        conn = st.connection("gsheets", type=GSheetsConnection)
+        early_data_df = conn.read(worksheet="Sheet1", ttl="0")
+    except Exception:
+        pass
+
+if early_data_df is None or early_data_df.empty:
+    if len(st.session_state.temp_records) > 0:
+        early_data_df = pd.DataFrame(st.session_state.temp_records)
+
+active_patients_map = {}
+patient_quick_options = ["➕ 新增 / 手動輸入新病患"]
+
+if early_data_df is not None and not early_data_df.empty:
+    req_c = ["填表時間", "單位", "床號", "姓名", "病歷號", "病患狀態"]
+    for col in req_c:
+        if col not in early_data_df.columns:
+            early_data_df[col] = "N/A"
+    try:
+        early_data_df["填表時間_dt"] = pd.to_datetime(early_data_df["填表時間"])
+    except Exception:
+        early_data_df["填表時間_dt"] = early_data_df["填表時間"]
+        
+    df_sorted = early_data_df.sort_values(by="填表時間_dt", ascending=True)
+    latest_recs = df_sorted.drop_duplicates(subset=["病歷號"], keep="last")
+    active_recs = latest_recs[latest_recs["病患狀態"] != "結案/停用BIPAP (結案)"]
+    
+    for _, r in active_recs.iterrows():
+        opt_label = f"📍 {r['單位']} {r['床號']}床 - {r['姓名']} ({r['病歷號']})"
+        active_patients_map[opt_label] = r.to_dict()
+        patient_quick_options.append(opt_label)
+
+# Callback to auto-fill sidebar fields when a patient is picked from the quick dropdown
+def on_quick_patient_select():
+    sel = st.session_state.get("quick_patient_choice")
+    if sel in active_patients_map:
+        p_info = active_patients_map[sel]
+        unit_val = p_info.get("單位", "7A")
+        st.session_state.sb_unit = unit_val if unit_val in ["7A", "7D", "14C", "14D"] else "7A"
+        st.session_state.sb_bed = str(p_info.get("床號", ""))
+        st.session_state.sb_name = str(p_info.get("姓名", ""))
+        st.session_state.sb_chart = str(p_info.get("病歷號", ""))
+        st.session_state.sb_order = str(p_info.get("當日使用醫囑", "BIPAP持續使用12hr, off 15 mins Q4H between 06:00-24:00"))
+        
+        raw_setting = str(p_info.get("BIPAP設定值", "16/8/40%"))
+        try:
+            parts = raw_setting.replace("%", "").split("/")
+            st.session_state.sb_ipap = int(parts[0])
+            st.session_state.sb_epap = int(parts[1])
+            f_val = int(parts[2])
+            st.session_state.sb_fio2 = f_val if f_val in fio2_options else 40
+        except Exception:
+            st.session_state.sb_ipap = 16
+            st.session_state.sb_epap = 8
+            st.session_state.sb_fio2 = 40
+    else:
+        st.session_state.sb_unit = "7A"
+        st.session_state.sb_bed = ""
+        st.session_state.sb_name = ""
+        st.session_state.sb_chart = ""
+        st.session_state.sb_order = "BIPAP持續使用12hr, off 15 mins Q4H between 06:00-24:00"
+        st.session_state.sb_ipap = 16
+        st.session_state.sb_epap = 8
+        st.session_state.sb_fio2 = 40
+
+# Define FiO2 options early
+fio2_options = [21, 25] + list(range(30, 101, 5))
+
 st.sidebar.subheader("👤 病患基本資料登記")
-unit_select = st.sidebar.selectbox("單位 (Unit)", ["7A", "7D", "14C", "14D"])
-bed_no = st.sidebar.text_input("床號 (Bed No.)", placeholder="例：12")
-patient_name = st.sidebar.text_input("姓名 (Patient Name)", placeholder="例：王小明")
-chart_no = st.sidebar.text_input("病歷號 (Chart No.)", placeholder="例：1234567")
+
+# Quick patient auto-fill dropdown
+st.sidebar.selectbox(
+    "⚡ 快速選擇已在案病患 (自動帶入)",
+    options=patient_quick_options,
+    key="quick_patient_choice",
+    on_change=on_quick_patient_select,
+    help="點選已在案的病患名稱，系統將自動帶入該病患最新的床號、姓名、病歷號及BIPAP醫囑與設定！新病患請選擇『新增/手動輸入』。"
+)
+
+# Initialize session state keys for sidebar inputs if not set
+if "sb_unit" not in st.session_state: st.session_state.sb_unit = "7A"
+if "sb_bed" not in st.session_state: st.session_state.sb_bed = ""
+if "sb_name" not in st.session_state: st.session_state.sb_name = ""
+if "sb_chart" not in st.session_state: st.session_state.sb_chart = ""
+if "sb_order" not in st.session_state: st.session_state.sb_order = "BIPAP持續使用12hr, off 15 mins Q4H between 06:00-24:00"
+if "sb_ipap" not in st.session_state: st.session_state.sb_ipap = 16
+if "sb_epap" not in st.session_state: st.session_state.sb_epap = 8
+if "sb_fio2" not in st.session_state: st.session_state.sb_fio2 = 40
+
+unit_select = st.sidebar.selectbox("單位 (Unit)", ["7A", "7D", "14C", "14D"], key="sb_unit")
+bed_no = st.sidebar.text_input("床號 (Bed No.)", placeholder="例：12", key="sb_bed")
+patient_name = st.sidebar.text_input("姓名 (Patient Name)", placeholder="例：王小明", key="sb_name")
+chart_no = st.sidebar.text_input("病歷號 (Chart No.)", placeholder="例：1234567", key="sb_chart")
 
 track_status = st.sidebar.selectbox(
     "🔄 本次填表病患狀態 (Status)", 
@@ -122,20 +229,19 @@ track_status = st.sidebar.selectbox(
 st.sidebar.subheader("📋 醫囑與呼吸器設定")
 bipap_order = st.sidebar.text_input(
     "當日 BIPAP 使用醫囑 (Order)", 
-    value="BIPAP持續使用12hr, off 15 mins Q4H between 06:00-24:00"
+    key="sb_order"
 )
 
 col_set1, col_set2, col_set3 = st.sidebar.columns(3)
 with col_set1:
-    ipap_val = st.number_input("IPAP", min_value=4, max_value=30, value=16, step=1, help="cmH2O")
+    ipap_val = st.number_input("IPAP", min_value=4, max_value=30, step=1, help="cmH2O", key="sb_ipap")
 with col_set2:
-    epap_val = st.number_input("EPAP", min_value=4, max_value=20, value=8, step=1, help="cmH2O")
+    epap_val = st.number_input("EPAP", min_value=4, max_value=20, step=1, help="cmH2O", key="sb_epap")
 with col_set3:
-    fio2_options = [21, 25] + list(range(30, 101, 5))
-    default_index = fio2_options.index(40)
-    fio2_val = st.selectbox("FiO2 (%)", options=fio2_options, index=default_index, help="氧氣濃度")
+    fio2_val = st.sidebar.selectbox("FiO2 (%)", options=fio2_options, help="氧氣濃度", key="sb_fio2")
 
 bipap_settings = f"{ipap_val}/{epap_val}/{fio2_val}%"
+
 
 nurse_name = st.sidebar.text_input("KEY單人員 / 護理師簽名", placeholder="請輸入姓名")
 
@@ -831,6 +937,6 @@ st.markdown("""
 <div style='text-align: center; color: #4B5563; font-size: 14px; line-height: 1.6;'>
     <p style='margin-bottom: 4px;'><b>© 2026 國立臺灣大學醫學院附設醫院 - FACE 圈 | 罩護無痕品管專案</b></p>
     <p style='margin-bottom: 4px;'>綜合診療部呼吸診療科、護理部、醫工部、品質管理中心聯合敬製</p>
-    <p style='margin-bottom: 0px;'><b>👨‍⚕️ 系統製作人：</b> 呼吸治療師 辛明翰 &nbsp;|&nbsp; <b>📅 製作日期：</b> 初版 2026.09.07 &nbsp;•&nbsp; 更新版 2026.09.13</p>
+    <p style='margin-bottom: 0px;'><b>👨‍⚕️ 系統製作人：</b> 呼吸治療師 辛明翰 &nbsp;|&nbsp; <b>📅 製作日期：</b> 初版 2026.09.07 &nbsp;•&nbsp; 更新版 2026.09.14</p>
 </div>
 """, unsafe_allow_html=True)
