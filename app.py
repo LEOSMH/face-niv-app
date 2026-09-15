@@ -385,6 +385,32 @@ with tab1:
             """)
         else:
             st.info("🎉 恭喜！目前無任何在案追蹤病患。所有收案病人都已順利結案。")
+
+        # Closed Cases Section
+        st.divider()
+        closed_records = latest_records[latest_records["病患狀態"] == "結案/停用BIPAP (結案)"]
+        if not closed_records.empty:
+            closed_display = closed_records.copy()
+            closed_display["收案號碼"] = closed_display["病歷號"].map(case_id_map)
+            closed_display["首登時間"] = closed_display["病歷號"].map(start_dates)
+            closed_display["結案時間"] = closed_display["填表時間"]
+            closed_display["累計查檢單張數"] = closed_display["病歷號"].map(check_counts)
+            
+            cols_closed = [
+                "收案號碼", "單位", "床號", "姓名", "病歷號", "BIPAP設定值", 
+                "首登時間", "結案時間", "累計查檢單張數"
+            ]
+            cols_closed = [c for c in cols_closed if c in closed_display.columns]
+            closed_table = closed_display[cols_closed].reset_index(drop=True)
+            closed_table.insert(0, "項次", range(1, len(closed_table) + 1))
+            closed_table.set_index("項次", inplace=True)
+            
+            st.subheader("📁 已結案病患歷史清單 (Closed Cases)")
+            st.caption(f"📌 目前共有 **{len(closed_table)}** 位病患已完成照護流程或停用 BIPAP 結案。資料皆即時來自 Google Sheets 雲端資料庫。")
+            st.dataframe(closed_table, use_container_width=True)
+        else:
+            st.subheader("📁 已結案病患歷史清單 (Closed Cases)")
+            st.caption("ℹ️ 目前尚無已結案之病患紀錄。")
     else:
         st.info("💡 雲端資料庫目前尚無收案紀錄。當同仁KEY入首筆單張紀錄後，此處將會自動呈現即時的每日巡查追蹤名單！")
 
@@ -895,11 +921,17 @@ with tab7:
                             conn = st.connection("gsheets", type=GSheetsConnection)
                             try:
                                 existing_df = conn.read(worksheet="Sheet1", ttl="0")
+                                if existing_df is not None and not existing_df.empty:
+                                    existing_df = existing_df.dropna(how="all")
+                                    existing_df = existing_df.loc[:, ~existing_df.columns.str.contains('^Unnamed')]
                             except Exception:
                                 existing_df = pd.DataFrame(columns=list(current_entry.keys()))
                                 
                             new_row_df = pd.DataFrame([current_entry])
-                            combined_df = pd.concat([existing_df, new_row_df], ignore_index=True)
+                            if existing_df is not None and not existing_df.empty:
+                                combined_df = pd.concat([existing_df, new_row_df], ignore_index=True)
+                            else:
+                                combined_df = new_row_df
                             
                             conn.update(worksheet="Sheet1", data=combined_df)
                             st.success(f"{local_success_msg} \n\n ☁️ 雲端同步成功！數據已安全寫入 Google Sheets。")
@@ -914,17 +946,31 @@ with tab7:
             st.session_state.temp_records = []
             st.info("已清空本地瀏覽器暫存數據。")
 
-    # Display Accumulated Table
-    st.subheader("📋 目前累計查檢清單 (交班與收案總表)")
-    if len(st.session_state.temp_records) > 0:
-        history_df = pd.DataFrame(st.session_state.temp_records)
+    # Display Accumulated Table (Read directly from Cloud Sheets if enabled so old data is NEVER lost!)
+    st.subheader("📋 目前累計查檢清單 (交班與收案總表 - 包含歷史雲端與本次新資料)")
+    history_df = None
+    if cloud_sync_enabled:
+        try:
+            conn = st.connection("gsheets", type=GSheetsConnection)
+            history_df = conn.read(worksheet="Sheet1", ttl="0")
+            if history_df is not None and not history_df.empty:
+                history_df = history_df.dropna(how="all")
+                history_df = history_df.loc[:, ~history_df.columns.str.contains('^Unnamed')]
+        except Exception:
+            pass
+            
+    if history_df is None or history_df.empty:
+        if len(st.session_state.temp_records) > 0:
+            history_df = pd.DataFrame(st.session_state.temp_records)
+
+    if history_df is not None and not history_df.empty:
         st.dataframe(history_df, use_container_width=True)
         
         csv_data = history_df.to_csv(index=False, encoding="utf-8-sig")
         st.download_button(
-            label="📥 匯出並下載為交班 CSV 報表 (可用 Excel 直接打開)",
+            label="📥 匯出並下載為完整歷史交班 CSV 報表 (可用 Excel 直接打開)",
             data=csv_data,
-            file_name=f"NIV_Care_Report_{datetime.datetime.now().strftime('%Y%m%d')}.csv",
+            file_name=f"NIV_Care_Report_Full_{datetime.datetime.now().strftime('%Y%m%d')}.csv",
             mime="text/csv",
             use_container_width=True
         )
