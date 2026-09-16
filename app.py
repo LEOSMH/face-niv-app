@@ -104,7 +104,7 @@ st.sidebar.markdown("""
 **C**omfort (舒適防護)
 **E**limination (消除壓傷)
 """)
-st.sidebar.caption("👨‍⚕️ **系統製作人：** 呼吸治療師 辛明翰\n📅 **製作日期：** 初版 2026.09.07 (更新版 2026.09.14)")
+st.sidebar.caption("👨‍⚕️ **系統製作人：** 呼吸治療師 辛明翰\n📅 **製作日期：** 初版 2026.09.07 (更新版 2026.09.16)")
 st.sidebar.divider()
 
 
@@ -677,6 +677,49 @@ with tab5:
     if not full_decomp_note:
         full_decomp_note = "無特殊備註"
 
+    st.divider()
+    st.subheader("3. 噴霧吸藥 (IH) 執行狀況與頻率：")
+    ih_use_select = st.selectbox(
+        "病患是否有使用 IH (Inhalation 噴霧吸藥治療)？",
+        ["否", "是", "未知", "其他 (手動填寫說明)"],
+        index=0,
+        key="ih_use_select_key",
+        help="記錄病患是否有搭配執行噴霧吸藥治療 (如 Ventolin, Pulmicort, Combivent 等)。"
+    )
+    
+    ih_status_val = ih_use_select
+    ih_freq_val = "N/A"
+    ih_note_val = "無"
+    
+    if ih_use_select == "是":
+        col_ih1, col_ih2 = st.columns(2)
+        with col_ih1:
+            ih_freq_select = st.selectbox(
+                "請選擇 IH 使用頻率 (常用頻率已排前)：",
+                ["Q6H", "Q8H", "Q4H", "Q12H", "其他 (手動填寫頻率)"],
+                index=0,
+                key="ih_freq_select_key"
+            )
+            if ih_freq_select == "其他 (手動填寫頻率)":
+                custom_ih_freq = st.text_input("請輸入自訂 IH 頻率", placeholder="例：Q8H PRN 或 BID", key="custom_ih_freq_key")
+                ih_freq_val = custom_ih_freq if custom_ih_freq else "其他頻率"
+            else:
+                ih_freq_val = ih_freq_select
+                
+        with col_ih2:
+            custom_ih_note = st.text_input("請輸入 IH 吸藥備註 / 藥物名稱 (可選)", placeholder="例：Combivent / Pulmicort / 配合 05/13/21 執行", key="custom_ih_note_key")
+            ih_note_val = custom_ih_note if custom_ih_note else "無特別備註"
+            
+    elif ih_use_select == "其他 (手動填寫說明)":
+        custom_ih_status = st.text_input("請輸入 IH 使用狀況說明", placeholder="例：PRN 必要時給予", key="custom_ih_status_key")
+        ih_status_val = f"其他 ({custom_ih_status})" if custom_ih_status else "其他"
+        custom_ih_note = st.text_input("請輸入 IH 備註說明", placeholder="例：病患自備藥物或配合噴霧治療", key="custom_ih_note_other_key")
+        ih_note_val = custom_ih_note if custom_ih_note else "無特別備註"
+        
+    elif ih_use_select == "未知":
+        custom_ih_note = st.text_input("請輸入 IH 備註說明 (可選)", placeholder="例：尚待醫囑確認", key="custom_ih_note_unknown_key")
+        ih_note_val = custom_ih_note if custom_ih_note else "無特別備註"
+
 # TAB 6: THREE SHIFTS SKIN ASSESSMENT
 with tab6:
     st.header("🛡️ 臉部皮膚完整度評估 (NPIAP 標準 - 三班KEY單)")
@@ -875,6 +918,9 @@ with tab7:
         "已執行減壓時間點": ", ".join(decomp_selected) if decomp_selected else "未勾選",
         "減壓執行次數": len(decomp_selected),
         "減壓備註與未執行原因": full_decomp_note,
+        "是否使用IH": ih_status_val,
+        "IH使用頻率": ih_freq_val,
+        "IH備註與藥物": ih_note_val,
         "白班皮膚狀況": (f"{skin_N.split(' - ')[0]} ({skin_site_N})" if skin_site_N not in ["無", "N/A"] else skin_N.split(' - ')[0]),
         "白班皮膚部位": skin_site_N,
         "小夜皮膚狀況": (f"{skin_HN.split(' - ')[0]} ({skin_site_HN})" if skin_site_HN not in ["無", "N/A"] else skin_HN.split(' - ')[0]),
@@ -919,19 +965,21 @@ with tab7:
                     with st.spinner("☁️ 正在同步資料至 Google Sheets 雲端資料庫..."):
                         try:
                             conn = st.connection("gsheets", type=GSheetsConnection)
+                            read_success = False
                             try:
                                 existing_df = conn.read(worksheet="Sheet1", ttl="0")
-                                if existing_df is not None and not existing_df.empty:
-                                    existing_df = existing_df.dropna(how="all")
-                                    existing_df = existing_df.loc[:, ~existing_df.columns.str.contains('^Unnamed')]
-                            except Exception:
-                                existing_df = pd.DataFrame(columns=list(current_entry.keys()))
-                                
-                            new_row_df = pd.DataFrame([current_entry])
-                            if existing_df is not None and not existing_df.empty:
+                                read_success = True
+                            except Exception as read_e:
+                                existing_df = pd.DataFrame()
+
+                            # If read failed but sheet might exist, verify or append safely
+                            if read_success and not existing_df.empty:
+                                # Clean unnamed columns
+                                existing_df = existing_df.loc[:, ~existing_df.columns.str.contains('^Unnamed')]
+                                new_row_df = pd.DataFrame([current_entry])
                                 combined_df = pd.concat([existing_df, new_row_df], ignore_index=True)
                             else:
-                                combined_df = new_row_df
+                                combined_df = pd.DataFrame([current_entry])
                             
                             conn.update(worksheet="Sheet1", data=combined_df)
                             st.success(f"{local_success_msg} \n\n ☁️ 雲端同步成功！數據已安全寫入 Google Sheets。")
@@ -946,31 +994,17 @@ with tab7:
             st.session_state.temp_records = []
             st.info("已清空本地瀏覽器暫存數據。")
 
-    # Display Accumulated Table (Read directly from Cloud Sheets if enabled so old data is NEVER lost!)
-    st.subheader("📋 目前累計查檢清單 (交班與收案總表 - 包含歷史雲端與本次新資料)")
-    history_df = None
-    if cloud_sync_enabled:
-        try:
-            conn = st.connection("gsheets", type=GSheetsConnection)
-            history_df = conn.read(worksheet="Sheet1", ttl="0")
-            if history_df is not None and not history_df.empty:
-                history_df = history_df.dropna(how="all")
-                history_df = history_df.loc[:, ~history_df.columns.str.contains('^Unnamed')]
-        except Exception:
-            pass
-            
-    if history_df is None or history_df.empty:
-        if len(st.session_state.temp_records) > 0:
-            history_df = pd.DataFrame(st.session_state.temp_records)
-
-    if history_df is not None and not history_df.empty:
+    # Display Accumulated Table
+    st.subheader("📋 目前累計查檢清單 (交班與收案總表)")
+    if len(st.session_state.temp_records) > 0:
+        history_df = pd.DataFrame(st.session_state.temp_records)
         st.dataframe(history_df, use_container_width=True)
         
         csv_data = history_df.to_csv(index=False, encoding="utf-8-sig")
         st.download_button(
-            label="📥 匯出並下載為完整歷史交班 CSV 報表 (可用 Excel 直接打開)",
+            label="📥 匯出並下載為交班 CSV 報表 (可用 Excel 直接打開)",
             data=csv_data,
-            file_name=f"NIV_Care_Report_Full_{datetime.datetime.now().strftime('%Y%m%d')}.csv",
+            file_name=f"NIV_Care_Report_{datetime.datetime.now().strftime('%Y%m%d')}.csv",
             mime="text/csv",
             use_container_width=True
         )
@@ -983,6 +1017,6 @@ st.markdown("""
 <div style='text-align: center; color: #4B5563; font-size: 14px; line-height: 1.6;'>
     <p style='margin-bottom: 4px;'><b>© 2026 國立臺灣大學醫學院附設醫院 - FACE 圈 | 罩護無痕品管專案</b></p>
     <p style='margin-bottom: 4px;'>綜合診療部呼吸診療科、護理部、醫工部、品質管理中心聯合敬製</p>
-    <p style='margin-bottom: 0px;'><b>👨‍⚕️ 系統製作人：</b> 呼吸治療師 辛明翰 &nbsp;|&nbsp; <b>📅 製作日期：</b> 初版 2026.09.07 &nbsp;•&nbsp; 更新版 2026.09.14</p>
+    <p style='margin-bottom: 0px;'><b>👨‍⚕️ 系統製作人：</b> 呼吸治療師 辛明翰 &nbsp;|&nbsp; <b>📅 製作日期：</b> 初版 2026.09.07 &nbsp;•&nbsp; 更新版 2026.09.16</p>
 </div>
 """, unsafe_allow_html=True)
