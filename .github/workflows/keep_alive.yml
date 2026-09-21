@@ -1,65 +1,21 @@
-name: Streamlit Keep Alive
-
+name: Keep Streamlit App Awake
 on:
   schedule:
-    # 調整為每 3 小時自動執行一次，徹底對抗 GitHub 伺服器的遲到機制
-    - cron: '0 */3 * * *'
-  workflow_dispatch: # 保留網頁手動觸發按鈕
+    - cron: '0 */10 * * *' # 每 10 小時自動執行一次
+  workflow_dispatch: # 允許你手動按按鈕測試
 
 jobs:
   ping:
     runs-on: ubuntu-latest
     steps:
-      # 【修正 1】必須先拉取程式碼，後面才能把紀錄推回 GitHub
-      - name: Checkout repo
-        uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
-
-      - name: Install Request Library
-        run: pip install requests
-
-      # 【修正 2】執行 Python 腳本，並將結果記錄到本地檔案中
-      - name: Simulate Real Browser Visit
-        run: |
-          cat << 'EOF' > simulate.py
-          import requests
-          from datetime import datetime
-          
-          headers = {
-              'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.5 Mobile/15E148 Safari/604.1'
-          }
-          
-          urls = [
-              'https://ards-vr-deadspace-calculator-cnef9rfpdr9579mnm9rccr.streamlit.app/',
-              'https://face-niv-app-994aaknhzmrfqouv5wqcma.streamlit.app/',
-              'https://facenivcarenr-idnrutlbzfmgedmftx3w5k.streamlit.app/'
-          ]
-          
-          # 將執行時間與狀態寫入文字檔，製造 GitHub 提交變動
-          with open("keep_alive.txt", "w", encoding="utf-8") as f:
-              f.write(f"最後更新時間: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
-              for url in urls:
-                  try:
-                      response = requests.get(url, headers=headers, timeout=30)
-                      log_msg = f"成功模擬真人訪問: {url}，狀態碼: {response.status_code}"
-                      print(log_msg)
-                      f.write(log_msg + "\n")
-                  except Exception as e:
-                      log_msg = f"訪問 {url} 發生錯誤: {e}"
-                      print(log_msg)
-                      f.write(log_msg + "\n")
-          EOF
-          python simulate.py
-
-      # 【修正 3】最關鍵的一步：將產生的 keep_alive.txt 推送回 GitHub，Streamlit 才會被喚醒！
-      - name: Push log to GitHub
-        run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          git add keep_alive.txt
-          git commit -m "Automated Ping & Keep Alive" || exit 0
-          git push
+    - name: Checkout repo
+      uses: actions/checkout@v4
+      
+    - name: Active commit
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        echo $(date) > keep_awake.txt
+        git add keep_awake.txt
+        git commit -m "Keep awake ping" || exit 0
+        git push
